@@ -5,11 +5,39 @@ import asyncio
 from dotenv import load_dotenv
  
 load_dotenv()
- 
+def eyes_detection(righteye_dectector, lefteye_dectector, frame):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    right_eye = righteye_dectector.detectMultiScale(gray,scaleFactor=1.1,minNeighbors=5,minSize=(30, 30))
+    left_eye = lefteye_dectector.detectMultiScale(gray, scaleFactor=1.1,minNeighbors=5,minSize=(30, 30))
+    for (x, y, w, h) in right_eye:
+        cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+    for (x, y, w, h) in left_eye:
+        
+        cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+
+def detect_faces(face_dectector, frame):
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = face_dectector.detectMultiScale(gray, scaleFactor=1.1,minNeighbors=5,minSize=(30, 30))
+    nb = len(faces)
+    for (x, y, w, h) in faces:
+        cv2.putText(frame, f"De Face", (x, y+10), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+        cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+    cv2.putText(frame, f"Nombre de faces: {nb}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 26, 155), 2)
+    
+def detect_profile(profile_dectector, frame):
+
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    faces = profile_dectector.detectMultiScale(gray, scaleFactor=1.1,minNeighbors=5,minSize=(30, 30))
+    nb = len(faces)
+
+    for (x, y, w, h) in faces:
+        cv2.putText(frame, f"De Profil", (x, y+10), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255  , 0), 2)
+        cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+    cv2.putText(frame, f"Nombre de faces: {nb}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 26, 155), 2)
+
+
 async def access_camera():
-    api_key = os.getenv('API_KEY')
- 
- 
+    api_key = os.getenv('API_KEY') 
     headers = {
         "Authorization": f"Bearer {api_key}"  
     }
@@ -47,8 +75,7 @@ def process_camera_data(data):
             if not webcam.isOpened():
                 print("Erreur d'ouverture de la webcam")
                 continue
-            fps =net.get(cv2.CAP_PROP_FPS)
-            fps_web =webcam.get(cv2.CAP_PROP_FPS)
+            
             while True:
                 ret, frame = net.read()
                 ret_web, frame_web = webcam.read()
@@ -56,31 +83,20 @@ def process_camera_data(data):
                     break
                 if ret_web == False:    
                     break
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                gray_web = cv2.cvtColor(frame_web, cv2.COLOR_BGR2GRAY)
-                faces = face_dectector.detectMultiScale(gray, scaleFactor=1.1,minNeighbors=5,minSize=(30, 30))
-                righteye_web = righteye_dectector.detectMultiScale(gray_web, scaleFactor=1.1,minNeighbors=5,minSize=(30, 30))
-                lefteye_web = lefteye_dectector.detectMultiScale(gray_web,  scaleFactor=1.1,minNeighbors=5,minSize=(30, 30))
-                profile_net = profile_dectector.detectMultiScale(gray,  scaleFactor=1.1,minNeighbors=5,minSize=(30, 30))
-                profile_web = profile_dectector.detectMultiScale(gray_web,  scaleFactor=1.1,minNeighbors=5,minSize=(30, 30))
- 
-                for (x, y, w, h) in faces:
-                    cv2.putText(frame, f"De Face", (x, y+10), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
-                    cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+                detect_faces(face_dectector, frame)
+                detect_faces(face_dectector, frame_web)
+                
+                
+                
+
 
  
-                for (x, y, w, h) in righteye_web:
-                    cv2.rectangle(frame_web, (x, y), (x+w, y+h), (255, 0, 0), 2)
-                for (x, y, w, h) in lefteye_web:
-                    cv2.rectangle(frame_web, (x, y), (x+w, y+h), (255, 0, 0), 2)
-                for(x, y, w, h) in profile_web:
-                    cv2.putText(frame_web, f"De profile", (x, y+10), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
-                    cv2.rectangle(frame_web, (x, y), (x+w, y+h), (255, 0, 0), 2)
+     
                
  
                
-                cv2.putText(frame, f"FPS: {fps:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
-                cv2.putText(frame_web, f"FPS: {fps_web:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+                #cv2.putText(frame, f"FPS: {fps:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+                #cv2.putText(frame_web, f"FPS: {fps_web:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
                 height = min(frame.shape[0], frame_web.shape[0])
                 frame_net_resized = cv2.resize(frame, (int(frame.shape[1] * height / frame.shape[0]), height))
                 frame_web_resized = cv2.resize(frame_web, (int(frame_web.shape[1] * height / frame_web.shape[0]), height))
