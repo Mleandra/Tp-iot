@@ -1,23 +1,23 @@
-import os 
+import os
 import cv2
-import aiohttp 
+import aiohttp
 import asyncio
 from dotenv import load_dotenv
-
+ 
 load_dotenv()
-
+ 
 async def access_camera():
     api_key = os.getenv('API_KEY')
-
-
+ 
+ 
     headers = {
         "Authorization": f"Bearer {api_key}"  
-    } 
-    
+    }
+   
     url = "https://api.netatmo.com/api/gethomesdata"
-
+ 
     async with aiohttp.ClientSession() as session:
-
+ 
         async with session.get(url, headers=headers) as response:
             if response.status == 200:
                 data = await response.json()
@@ -34,13 +34,16 @@ def process_camera_data(data):
             print(f"VPN URL: {camera.get('vpn_url')}")
             print('---')
             face_dectector= cv2.CascadeClassifier('haarcascade_frontalface_alt2.xml')
+            righteye_dectector= cv2.CascadeClassifier('haarcascade_righteye_2splits.xml')
+            lefteye_dectector= cv2.CascadeClassifier('haarcascade_lefteye_2splits.xml')
+            profile_dectector= cv2.CascadeClassifier('haarcascade_profileface.xml')
             net = cv2.VideoCapture(camera.get('vpn_url')+"/live/files/low/index.m3u8")
             webcam = cv2.VideoCapture(0)
-            
+           
             if not net.isOpened():
                 print("Erreur d'ouverture de la caméra réseau")
                 continue
-
+ 
             if not webcam.isOpened():
                 print("Erreur d'ouverture de la webcam")
                 continue
@@ -55,16 +58,27 @@ def process_camera_data(data):
                     break
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 gray_web = cv2.cvtColor(frame_web, cv2.COLOR_BGR2GRAY)
-                faces = face_dectector.detectMultiScale(gray, 1.3, 5)
-                faces_web = face_dectector.detectMultiScale(gray_web, 1.3, 5)
-
+                faces = face_dectector.detectMultiScale(gray, scaleFactor=1.1,minNeighbors=5,minSize=(30, 30))
+                righteye_web = righteye_dectector.detectMultiScale(gray_web, scaleFactor=1.1,minNeighbors=5,minSize=(30, 30))
+                lefteye_web = lefteye_dectector.detectMultiScale(gray_web,  scaleFactor=1.1,minNeighbors=5,minSize=(30, 30))
+                profile_net = profile_dectector.detectMultiScale(gray,  scaleFactor=1.1,minNeighbors=5,minSize=(30, 30))
+                profile_web = profile_dectector.detectMultiScale(gray_web,  scaleFactor=1.1,minNeighbors=5,minSize=(30, 30))
+ 
                 for (x, y, w, h) in faces:
+                    cv2.putText(frame, f"De Face", (x, y+10), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
                     cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
 
-                for (x, y, w, h) in faces_web:
+ 
+                for (x, y, w, h) in righteye_web:
                     cv2.rectangle(frame_web, (x, y), (x+w, y+h), (255, 0, 0), 2)
-
-                
+                for (x, y, w, h) in lefteye_web:
+                    cv2.rectangle(frame_web, (x, y), (x+w, y+h), (255, 0, 0), 2)
+                for(x, y, w, h) in profile_web:
+                    cv2.putText(frame_web, f"De profile", (x, y+10), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+                    cv2.rectangle(frame_web, (x, y), (x+w, y+h), (255, 0, 0), 2)
+               
+ 
+               
                 cv2.putText(frame, f"FPS: {fps:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
                 cv2.putText(frame_web, f"FPS: {fps_web:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
                 height = min(frame.shape[0], frame_web.shape[0])
@@ -73,16 +87,16 @@ def process_camera_data(data):
                 combined_frame = cv2.hconcat([frame_net_resized, frame_web_resized])  
                 cv2.imshow('2 camera', combined_frame)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
-
+ 
                     break
-                    
+                   
         net.release()
         webcam.release()    
-        
+       
         cv2.destroyAllWindows()
  
 async def main():
     await access_camera()
-
+ 
 if __name__ == "__main__":
     asyncio.run(main())
