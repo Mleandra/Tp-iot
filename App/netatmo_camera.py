@@ -54,9 +54,14 @@ def process_camera_data(data):
                 if ret_web == False:    
                     break
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                gray_web = cv2.cvtColor(frame_web, cv2.COLOR_BGR2GRAY)
                 faces = face_dectector.detectMultiScale(gray, 1.3, 5)
+                faces_web = face_dectector.detectMultiScale(gray_web, 1.3, 5)
+
                 for (x, y, w, h) in faces:
                     cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+
+                for (x, y, w, h) in faces_web:
                     cv2.rectangle(frame_web, (x, y), (x+w, y+h), (255, 0, 0), 2)
 
                 
